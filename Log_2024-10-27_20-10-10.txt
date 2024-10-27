@@ -1,2 +1,0 @@
-27/10/2024 20:10:10 - https://httpbin.org/status/ - Online: false
-27/10/2024 20:10:11 - https://stackoverflow.com - Online: true
