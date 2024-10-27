@@ -1,0 +1,4 @@
+27/10/2024 20:13:46 - https://www.b3.com.br/pt_br/para-voce - Online: true
+27/10/2024 20:13:46 - https://www.amazon.com.br/ - Online: true
+27/10/2024 20:13:46 - https://www.tesla.com/ - Online: false
+27/10/2024 20:13:46 - https://www.leagueoflegends.com/pt-br/ - Online: true

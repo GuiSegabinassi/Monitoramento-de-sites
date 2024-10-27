@@ -3,173 +3,184 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
-	"strconv"
+	"sort"
 	"strings"
 	"time"
 )
 
-const monitoramento = 1
-
-const delay = 10
-
 func main() {
-	exibeIntrodução()
+	// Configuração do servidor HTTP com endpoints para o front-end
+	http.HandleFunc("/start-monitoring", startMonitoringHandler)
+	http.HandleFunc("/logs", latestLogHandler)
+	http.HandleFunc("/list-logs", listLogsHandler)
+	http.HandleFunc("/view-log", viewLogHandler)
+	http.HandleFunc("/exit", exitHandler)
+	http.Handle("/", http.FileServer(http.Dir("../web"))) // Serve a pasta de front-end
 
-	for {
-		exibeMenu()
-
-		comando := lerComando()
-
-		if comando == 1 {
-			iniciarMonitoramento()
-		} else if comando == 2 {
-			fmt.Println("Exibindo Logs...")
-			imprimeLogs()
-
-		} else if comando == 3 {
-			fmt.Println("Finalizando a execução do programa...")
-			os.Exit(3)
-		} else {
-			fmt.Println("O comando digitado não é um comando reconhecido no menu")
-			fmt.Println("Finalizando a execução do programa...")
-			os.Exit(-1)
-		}
+	fmt.Println("Server is running on http://localhost:8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal("Error starting server:", err)
 	}
-}
-
-func exibeIntrodução() {
-	var nome string
-	var versao float32 = 1.1
-
-	fmt.Println("Digite o seu nome: ")
-	fmt.Scan(&nome)
-	fmt.Println("Olá senhor,", nome)
-	fmt.Println("O senhor está na versão :", versao)
-	fmt.Println("...")
-}
-
-func exibeMenu() {
-	fmt.Println("Escolha uma das opções abaixo: ")
-
-	fmt.Println("1 - Iniciar Monitoramento")
-	fmt.Println("2 - Exibir Logs")
-	fmt.Println("3 - Sair do Programa")
-}
-
-func lerComando() int {
-	var comandoLido int
-	fmt.Scan(&comandoLido)
-	fmt.Println("O comando escolhido foi: ", comandoLido)
-
-	return comandoLido
 }
 
 func iniciarMonitoramento() {
-	fmt.Println("Monitorando...")
-
-	// sites := []string{
-	// 	"https://httpbin.org/status/",
-	// 	"https://stackoverflow.com",
-	// 	"https://www.runningland.com.br/",
-	// 	"https://www.riotgames.com/pt-br",
-	// 	"https://www.premierleague.com/",
-	// 	"https://olympics.com/pt/paris-2024/os-jogos/jogos-olimpicos-paralimpicos/jogos-paralimpicos",
-	// 	"https://www.nasdaq.com",
-	// 	"https://www.b3.com.br/pt_br/para-voce",
-	// 	"https://www.amazon.com.br/",
-	// 	"https://www.tesla.com/",
-	// 	"https://www.leagueoflegends.com/pt-br/",
-	// }
+	fmt.Println("Starting monitoring...")
 
 	sites := lerSitesDoArquivo()
-
-	for i := 0; i < monitoramento; i++ {
-		for i, site := range sites {
-			fmt.Println("Testando site :", i, site)
-			testaSite(site)
-
-			fmt.Println("****************************************************************")
-		}
-		fmt.Println("********************************************************************")
-		fmt.Println("Testando outra vez")
-		fmt.Println("********************************************************************")
-
-		time.Sleep(delay * time.Second)
+	if len(sites) == 0 {
+		fmt.Println("No sites found to monitor.")
+		return
 	}
 
+	for _, site := range sites {
+		testaSite(site)
+		fmt.Println("-------------------------------------------------------------")
+	}
+
+	fmt.Println("Monitoring completed.")
+}
+
+func startMonitoringHandler(w http.ResponseWriter, r *http.Request) {
+	iniciarMonitoramento()
+	fmt.Fprintln(w, "Monitoring completed!")
+}
+
+func latestLogHandler(w http.ResponseWriter, r *http.Request) {
+	logFile, err := getLatestLogFile()
+	if err != nil {
+		http.Error(w, "Could not read logs", http.StatusInternalServerError)
+		return
+	}
+
+	data, err := os.ReadFile(logFile)
+	if err != nil {
+		http.Error(w, "Could not read log file", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(data)
+}
+
+func getLatestLogFile() (string, error) {
+	files, err := os.ReadDir(".")
+	if err != nil {
+		return "", err
+	}
+
+	var logFiles []string
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "Log_") && strings.HasSuffix(file.Name(), ".txt") {
+			logFiles = append(logFiles, file.Name())
+		}
+	}
+
+	if len(logFiles) == 0 {
+		return "", fmt.Errorf("no log files found")
+	}
+
+	sort.Strings(logFiles)
+	return logFiles[len(logFiles)-1], nil
+}
+
+func listLogsHandler(w http.ResponseWriter, r *http.Request) {
+	files, err := os.ReadDir(".") // Lê o diretório atual
+	if err != nil {
+		http.Error(w, "Could not read log directory", http.StatusInternalServerError)
+		return
+	}
+
+	var logFiles []string
+	for _, file := range files {
+		if strings.HasPrefix(file.Name(), "Log_") && strings.HasSuffix(file.Name(), ".txt") {
+			logFiles = append(logFiles, file.Name())
+		}
+	}
+
+	for _, logFile := range logFiles {
+		fmt.Fprintln(w, logFile)
+	}
+}
+
+func viewLogHandler(w http.ResponseWriter, r *http.Request) {
+	logFile := r.URL.Query().Get("file")
+	if logFile == "" || !strings.HasPrefix(logFile, "Log_") || !strings.HasSuffix(logFile, ".txt") {
+		http.Error(w, "Invalid log file", http.StatusBadRequest)
+		return
+	}
+
+	data, err := os.ReadFile(logFile)
+	if err != nil {
+		http.Error(w, "Could not read log file", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(data)
+}
+
+func exitHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Exiting program...")
+	os.Exit(0)
 }
 
 func testaSite(site string) {
+	logFileName := fmt.Sprintf("Log_%s.txt", time.Now().Format("2006-01-02_15-04-05"))
+	arquivo, err := os.OpenFile(logFileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Printf("Error opening log file: %v", err)
+		return
+	}
+	defer arquivo.Close()
+
 	resp, err := http.Get(site)
 	if err != nil {
-		fmt.Println("Erro ao tentar acessar o site:", site, "-", err)
+		fmt.Printf("Error accessing site %s: %v\n", site, err)
+		registraLog(arquivo, site, false)
 		return
 	}
 	defer resp.Body.Close()
 
-	if resp != nil && resp.StatusCode == 200 {
-		fmt.Println("Site:", site, "foi carregado com sucesso!", resp.StatusCode)
-		registraLog(site, true)
-	} else if resp != nil {
-		fmt.Println("Site:", site, "está com problemas!", resp.StatusCode)
-		registraLog(site, false)
-	} else {
-		fmt.Println("Site:", site, "não pôde ser carregado.")
+	status := resp.StatusCode == 200
+	fmt.Printf("Site: %s - Status: %s\n", site, statusText(status))
+	registraLog(arquivo, site, status)
+}
+
+func registraLog(arquivo *os.File, site string, status bool) {
+	linha := fmt.Sprintf("%s - %s - Online: %t\n", time.Now().Format("02/01/2006 15:04:05"), site, status)
+	if _, err := arquivo.WriteString(linha); err != nil {
+		log.Printf("Error writing to log file: %v", err)
 	}
 }
 
 func lerSitesDoArquivo() []string {
-
 	var sites []string
 	arquivo, err := os.Open("sites.txt")
-
 	if err != nil {
-		fmt.Println("Ocorreu um erro!", err)
+		log.Printf("Error opening sites file: %v", err)
+		return sites
 	}
+	defer arquivo.Close()
 
-	leitor := bufio.NewReader(arquivo)
-
-	for {
-		linha, err := leitor.ReadString('\n')
-		linha = strings.TrimSpace(linha)
-
-		sites = append(sites, linha)
-
-		fmt.Println(linha)
-
-		if err == io.EOF {
-			break
+	leitor := bufio.NewScanner(arquivo)
+	for leitor.Scan() {
+		linha := strings.TrimSpace(leitor.Text())
+		if linha != "" {
+			sites = append(sites, linha)
 		}
-
 	}
 
-	arquivo.Close()
-
+	if err := leitor.Err(); err != nil {
+		log.Printf("Error reading sites file: %v", err)
+	}
 	return sites
 }
 
-func registraLog(site string, status bool) {
-	arquivo, err := os.OpenFile("Log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-
-	if err != nil {
-		fmt.Println("Ocorreu um erro: ", err)
+// Função auxiliar para exibir o texto do status
+func statusText(status bool) string {
+	if status {
+		return "Online"
 	}
-
-	arquivo.WriteString(time.Now().Format("02/01/2006 15:04:05") + " - " + site + "- Online: " + strconv.FormatBool(status) + "\n")
-
-	arquivo.Close()
-}
-
-func imprimeLogs() {
-	arquivo, err := os.ReadFile("Log.txt")
-
-	if err != nil {
-		fmt.Println("Ocorreu um erro: ", err)
-	}
-
-	fmt.Println(string(arquivo))
-
+	return "Offline"
 }

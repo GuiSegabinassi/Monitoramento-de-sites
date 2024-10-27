@@ -1,9 +1,0 @@
-
-23/08/2024 18:37:30 - https://httpbin.org/status/- Online: false
-23/08/2024 18:37:30 - https://stackoverflow.com- Online: true
-23/08/2024 18:37:31 - https://www.runningland.com.br/- Online: true
-23/08/2024 18:37:31 - https://www.riotgames.com/pt-br- Online: true
-23/08/2024 18:37:31 - https://www.premierleague.com/- Online: true
-23/08/2024 18:37:32 - https://www.b3.com.br/pt_br/para-voce- Online: true
-23/08/2024 18:37:32 - https://www.amazon.com.br/- Online: true
-23/08/2024 18:37:32 - https://www.leagueoflegends.com/pt-br/- Online: true

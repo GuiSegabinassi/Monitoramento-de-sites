@@ -1,0 +1,4 @@
+27/10/2024 20:07:57 - https://www.riotgames.com/pt-br - Online: true
+27/10/2024 20:07:57 - https://www.premierleague.com/ - Online: true
+27/10/2024 20:07:57 - https://olympics.com/pt/paris-2024/os-jogos/jogos-olimpicos-paralimpicos/jogos-paralimpicos - Online: false
+27/10/2024 20:07:58 - https://www.nasdaq.com - Online: false

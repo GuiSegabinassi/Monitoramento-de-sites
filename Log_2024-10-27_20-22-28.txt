@@ -1,0 +1,3 @@
+27/10/2024 20:22:28 - https://httpbin.org/status/ - Online: false
+27/10/2024 20:22:28 - https://stackoverflow.com - Online: true
+27/10/2024 20:22:29 - https://www.runningland.com.br/ - Online: true
